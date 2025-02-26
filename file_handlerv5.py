@@ -7,10 +7,11 @@ from medical_db import MedicalReportDB  # Use the provided DB interface
 # Import your extraction function (now supports PDFs directly)
 from info_extractorv2 import get_requested_info
 
-# Folder with incoming files (must already exist)
-receiver_folder = r"...\receiver_folder"
+# Folder with incoming files
+receiver_folder = r"C:\Users\Usuario\Desktop\receiver_folder2"
+
 # Database configuration (creates the DB if it does not exist)
-db_path = r"...\server\medical_reports.db"
+db_path = r"C:\Users\Usuario\Desktop\server\medical_reports.db"
 
 db = MedicalReportDB(db_path=db_path)
 
@@ -102,22 +103,39 @@ def main(progress_callback=None):
     print(f"Batch processing complete. Processed {processed_groups} groups out of {total_groups}.")
     db.close()
 
-def process_matched_files(pdf_path, audio_path):
+def process_matched_files(pdf_path, audio_path, is_ambulatorio=False, is_multiples_audios=False):
     """
     Processes the matched PDF and audio files:
       - Extracts PDF info using get_requested_info().
       - Uses the 'Patient Name' (spaces replaced with underscores) and the current date/time
         to build unique filenames.
-      - Copies both files into destination_folder with the new names.
+      - If is_ambulatorio == True, prepend "AMBULATORIO" to the filename.
+      - If is_multiples_audios == True, prepend "MULTIPLES_AUDIOS" to the filename.
+      - Copies both files into receiver_folder with the new names.
     """
-    destination_folder= receiver_folder
+    destination_folder = receiver_folder
+
     # Extract PDF info
     info = get_requested_info(pdf_path)
     patient_name = info.get("Patient Name", "unknown").strip().replace(" ", "_")
     
     # Build a unique filename using patient name and current datetime
     now = datetime.now().strftime("%m-%d-%Y_%H-%M-%S")
-    new_basename = f"{patient_name}_{now}"
+
+    # Build a prefix if either checkbox is set
+    prefixes = []
+    if is_ambulatorio:
+        prefixes.append("AMBULATORIO")
+    if is_multiples_audios:
+        prefixes.append("MULTIPLES_AUDIOS")
+    
+    # Combine prefix, patient name, and datetime
+    if prefixes:
+        prefix_str = "_".join(prefixes)
+        new_basename = f"{prefix_str}_{patient_name}_{now}"
+    else:
+        new_basename = f"{patient_name}_{now}"
+    
     new_pdf_name = new_basename + ".pdf"
     new_audio_name = new_basename + ".mp3"
     
