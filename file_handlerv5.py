@@ -7,7 +7,7 @@ from medical_db import MedicalReportDB  # Use the provided DB interface
 # Import your extraction function (now supports PDFs directly)
 from info_extractorv2 import get_requested_info
 
-# Folder with incoming files
+# Folder with incoming files (must already exist)
 receiver_folder = r"...\receiver_folder"
 # Database configuration (creates the DB if it does not exist)
 db_path = r"...\server\medical_reports.db"
