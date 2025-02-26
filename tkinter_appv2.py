@@ -23,7 +23,7 @@ from medical_db import search_database  # For the search page
 # --------------------------
 
 db_path = r"C:\Users\Usuario\Desktop\server\medical_reports.db"
-receiver_folder = r"C:\Users\Usuario\Desktop\receiver_folder"
+receiver_folder = r"C:\Users\Usuario\Desktop\receiver_folder2"
 
 class QueueOutput:
     def __init__(self, output_queue):

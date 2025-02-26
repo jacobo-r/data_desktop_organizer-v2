@@ -8,10 +8,11 @@ from medical_db import MedicalReportDB  # Use the provided DB interface
 from info_extractorv2 import get_requested_info
 
 # Folder with incoming files
-receiver_folder = r"C:\Users\Usuario\Desktop\receiver_folder"
+receiver_folder = r"C:\Users\Usuario\Desktop\receiver_folder2"
 
 # Database configuration (creates the DB if it does not exist)
 db_path = r"C:\Users\Usuario\Desktop\server\medical_reports.db"
+
 db = MedicalReportDB(db_path=db_path)
 
 # Allowed file extensions for the two types of files

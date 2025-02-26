@@ -229,7 +229,7 @@ def print_requested_fields(info: dict) -> None:
     exam_type           = find_exam_type(procedimiento)
     # Extract patient ID from the "documento" field
     documento_text = info.get("documento", "").strip()
-    match = re.search(r"CC\s*[-\s]+(\d{8}|\d{10})", documento_text, re.IGNORECASE)
+    match = re.search(r"CC\s*[-\s]+(\d{10}|\d{8})", documento_text, re.IGNORECASE)
     patient_id = match.group(1) if match else ""
 
     print(f"Patient Name: {patient_name}")
@@ -287,13 +287,13 @@ import unittest
 class TestFieldExtraction(unittest.TestCase):
     def test_header_extraction(self):
         header_text = """
-        Paciente : ROMERO GARCIA JOSE HUMERTO Documento : CC - 10069647 - Sexo : M - Edad : 30 Años
+        Paciente : ROMERO GARCIA JOSE HUMERTO Documento : CC - 1006964711 - Sexo : M - Edad : 30 Años
         Entidad : CLINICA DEL COUNTRY Procedimiento : RADIOGRAFIA DE TORAX Fecha : 08/07/2024   nro remisión : 889418
         Transcripción : OROZCO BARTOLO OSBALDO 10/07/2024
         """
         fields = extract_header_fields(header_text)
         self.assertEqual(fields["paciente"], "romero garcia jose humerto")
-        self.assertEqual(fields["documento"], "cc - 10069647")
+        self.assertEqual(fields["documento"], "cc - 1006964711")
         self.assertEqual(fields["entidad"], "clinica del country")
         self.assertEqual(fields["procedimiento"], "radiografia de torax")
         self.assertEqual(fields["fecha"], "08/07/2024")
@@ -315,8 +315,6 @@ class TestFieldExtraction(unittest.TestCase):
 
     
 
-#if __name__ == "__main__":
-#    unittest.main()
 
 
 if __name__ == "__main__":
