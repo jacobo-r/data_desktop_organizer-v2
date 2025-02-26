@@ -22,8 +22,9 @@ from medical_db import search_database  # For the search page
 # Existing classes: QueueOutput, run_processing, UploadFrame, SearchFrame
 # --------------------------
 
-db_path = r"C:\Users\Usuario\Desktop\server\medical_reports.db"
-receiver_folder = r"C:\Users\Usuario\Desktop\receiver_folder2"
+db_path = r"...\server\medical_reports.db"
+receiver_folder = r"...\receiver_folder"
+desktop = r"..."
 
 class QueueOutput:
     def __init__(self, output_queue):
@@ -120,7 +121,6 @@ def copy_files_to_desktop(audio_path, pdf_path):
         return
     
     try:
-        desktop = os.path.join(os.path.expanduser("~"), "Desktop")
         shutil.copy2(audio_path, desktop)
         shutil.copy2(pdf_path, desktop)
         messagebox.showinfo("Éxito", "Los archivos se copiaron al escritorio con éxito.")
