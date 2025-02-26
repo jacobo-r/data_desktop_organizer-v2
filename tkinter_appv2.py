@@ -22,9 +22,9 @@ from medical_db import search_database  # For the search page
 # Existing classes: QueueOutput, run_processing, UploadFrame, SearchFrame
 # --------------------------
 
-db_path = r"...\server\medical_reports.db"
-receiver_folder = r"...\receiver_folder"
-desktop = r"..."
+db_path = r"C:\Users\Usuario\Desktop\server\medical_reports.db"
+receiver_folder = r"C:\Users\Usuario\Desktop\receiver_folder2"
+desktop =  r"C:\Users\Usuario\Desktop"
 
 class QueueOutput:
     def __init__(self, output_queue):
@@ -272,14 +272,23 @@ class VerifyMatchFrame(ttk.Frame):
         # Storage for extracted PDF info
         self.pdf_info = {}
         
-        # Top bar with a back button
+        # Booleans for the new checkboxes
+        self.ambulatorio_var = tk.BooleanVar(value=False)
+        self.multiples_audios_var = tk.BooleanVar(value=False)
+        
+        # ------------------------
+        # 1) Top bar with a back button
+        # ------------------------
         top_frame = ttk.Frame(self)
         top_frame.pack(fill="x", pady=5)
+        
         back_button = ttk.Button(top_frame, text="Volver al Menu",
                                  command=lambda: controller.show_frame(MainMenu))
         back_button.pack(side="left", padx=10)
         
-        # Main content area with two side-by-side frames
+        # ------------------------
+        # 2) Main content area (side-by-side frames)
+        # ------------------------
         content_frame = ttk.Frame(self)
         content_frame.pack(fill="both", expand=True, padx=10, pady=10)
         
@@ -314,7 +323,10 @@ class VerifyMatchFrame(ttk.Frame):
         
         self.patient_name_var = tk.StringVar(value="Nombre del Paciente: No disponible")
         self.doctor_name_var = tk.StringVar(value="Doctor: No disponible")
+        self.exam_type_var = tk.StringVar(value="Tipo de Examen: No disponible")
+        self.transcription_date_var = tk.StringVar(value="Fecha de Transcripción: No disponible")
         
+        # Patient name
         patient_frame = ttk.Frame(info_frame)
         patient_frame.pack(fill="x", pady=2)
         self.patient_label = ttk.Label(patient_frame, textvariable=self.patient_name_var)
@@ -329,6 +341,7 @@ class VerifyMatchFrame(ttk.Frame):
         )
         self.patient_check.pack(side="left", padx=5)
         
+        # Doctor
         doctor_frame = ttk.Frame(info_frame)
         doctor_frame.pack(fill="x", pady=2)
         self.doctor_label = ttk.Label(doctor_frame, textvariable=self.doctor_name_var)
@@ -343,7 +356,53 @@ class VerifyMatchFrame(ttk.Frame):
         )
         self.doctor_check.pack(side="left", padx=5)
         
-        # Instructions block
+        # Exam Type
+        exam_frame = ttk.Frame(info_frame)
+        exam_frame.pack(fill="x", pady=2)
+        self.exam_label = ttk.Label(exam_frame, textvariable=self.exam_type_var)
+        self.exam_label.pack(side="left", padx=5)
+        
+        # Transcription Date
+        date_frame = ttk.Frame(info_frame)
+        date_frame.pack(fill="x", pady=2)
+        self.date_label = ttk.Label(date_frame, textvariable=self.transcription_date_var)
+        self.date_label.pack(side="left", padx=5)
+        
+        # ------------------------
+        # 3) Separator after the rectangles + info
+        # ------------------------
+        sep_between_info_and_checkboxes = ttk.Separator(self, orient="horizontal")
+        sep_between_info_and_checkboxes.pack(fill="x", pady=10)
+        
+        # ------------------------
+        # 4) Checkboxes frame (Ambulatorio / Múltiples audios)
+        # ------------------------
+        checkboxes_frame = ttk.Frame(self)
+        checkboxes_frame.pack(pady=10)
+        
+        ambulatorio_check = ttk.Checkbutton(
+            checkboxes_frame, 
+            text="Paciente Ambulatorio", 
+            variable=self.ambulatorio_var
+        )
+        ambulatorio_check.pack(anchor="w", pady=2)
+        
+        multiples_check = ttk.Checkbutton(
+            checkboxes_frame, 
+            text="Hay múltiples audios por estudio", 
+            variable=self.multiples_audios_var
+        )
+        multiples_check.pack(anchor="w", pady=2)
+        
+        # ------------------------
+        # 5) Separator before instructions
+        # ------------------------
+        sep_between_checkboxes_and_instructions = ttk.Separator(self, orient="horizontal")
+        sep_between_checkboxes_and_instructions.pack(fill="x", pady=10)
+        
+        # ------------------------
+        # 6) Instructions block
+        # ------------------------
         instructions_frame = ttk.Frame(self)
         instructions_frame.pack(pady=10)
         
@@ -365,10 +424,15 @@ class VerifyMatchFrame(ttk.Frame):
         )
         instructions_label.pack()
         
-        # Verify Match button (initially locked)
+        # ------------------------
+        # 7) Verify Match button (initially locked)
+        # ------------------------
         self.verify_button = ttk.Button(self, text="Verificar", command=self.verify_match, state="disabled")
         self.verify_button.pack(pady=10)
     
+    # --------------------------------------------------------------------------
+    # File selection & PDF info
+    # --------------------------------------------------------------------------
     def select_audio_file(self, event=None):
         file_path = filedialog.askopenfilename(title="Select Audio File", filetypes=[("MP3 files", "*.mp3")])
         if file_path:
@@ -391,6 +455,7 @@ class VerifyMatchFrame(ttk.Frame):
             self.pdf_file_path = file_path
             filename = os.path.basename(file_path)
             self.pdf_label.config(text=filename)
+            
             # Extract info from the PDF using get_requested_info from info_extractorv2
             try:
                 from info_extractorv2 import get_requested_info
@@ -398,16 +463,26 @@ class VerifyMatchFrame(ttk.Frame):
             except Exception as e:
                 self.pdf_info = {}
                 messagebox.showerror("Error", f"Error extracting info from PDF: {e}")
+            
             patient_name = self.pdf_info.get("Patient Name", "Not Available")
             doctor = self.pdf_info.get("Doctor", "Not Available")
+            exam_type = self.pdf_info.get("Exam Type", "Not Available")
+            transcription_date = self.pdf_info.get("Transcription Date", "Not Available")
+            
             self.patient_name_var.set(f"Nombre del Paciente: {patient_name}")
             self.doctor_name_var.set(f"Doctor: {doctor}")
+            self.exam_type_var.set(f"Tipo de Examen: {exam_type}")
+            self.transcription_date_var.set(f"Fecha de Transcripción: {transcription_date}")
+            
             self.patient_check_var.set(False)
             self.doctor_check_var.set(False)
             self.patient_check.config(state="disabled")
             self.doctor_check.config(state="disabled")
             self.verify_button.config(state="disabled")
     
+    # --------------------------------------------------------------------------
+    # Audio control & verification checks
+    # --------------------------------------------------------------------------
     def play_audio(self):
         if self.audio_file_path:
             try:
@@ -442,13 +517,26 @@ class VerifyMatchFrame(ttk.Frame):
         else:
             self.verify_button.config(state="disabled")
     
+    # --------------------------------------------------------------------------
+    # Final verification & file processing
+    # --------------------------------------------------------------------------
     def verify_match(self):
         if not self.audio_file_path or not self.pdf_file_path:
             messagebox.showwarning("Warning", "ATENCION: debe haber seleccionado un audio y un pdf.")
             return
         
+        # Grab the states of the new checkboxes
+        is_ambulatorio = self.ambulatorio_var.get()
+        is_multiples_audios = self.multiples_audios_var.get()
+        
         try:
-            result = file_handlerv5.process_matched_files(self.pdf_file_path, self.audio_file_path)
+            # Call the updated process_matched_files with the new parameters
+            result = file_handlerv5.process_matched_files(
+                self.pdf_file_path, 
+                self.audio_file_path, 
+                is_ambulatorio=is_ambulatorio, 
+                is_multiples_audios=is_multiples_audios
+            )
             if result:
                 messagebox.showinfo("Success", "Ambos archivos fueron verificados y guardados.")
                 self.reset_ui()
@@ -456,22 +544,38 @@ class VerifyMatchFrame(ttk.Frame):
             messagebox.showerror("Error", f"Error durante el procesamiento: {e}")
     
     def reset_ui(self):
+        # Reset file paths
         self.audio_file_path = None
         self.pdf_file_path = None
+        
+        # Reset labels
         self.audio_label.config(text="Click para seleccionar Audio")
         self.pdf_label.config(text="Click para seleccionar archivo PDF")
+        
+        # Reset audio controls
         self.play_button.config(state="disabled")
         self.reset_button.config(state="disabled")
+        pygame.mixer.music.stop()
+        self.audio_played = False
+        self.audio_play_start_time = None
+        
+        # Reset verification
         self.patient_name_var.set("Nombre del Paciente: No disponible")
         self.doctor_name_var.set("Doctor: No disponible")
+        self.exam_type_var.set("Tipo de Examen: No disponible")
+        self.transcription_date_var.set("Fecha de Transcripción: No disponible")
+        
         self.patient_check_var.set(False)
         self.doctor_check_var.set(False)
         self.patient_check.config(state="disabled")
         self.doctor_check.config(state="disabled")
+        
+        # Reset main verify button
         self.verify_button.config(state="disabled")
-        self.audio_played = False
-        self.audio_play_start_time = None
-        pygame.mixer.music.stop()
+        
+        # Reset the checkboxes (optional: you can leave them as user selected)
+        self.ambulatorio_var.set(False)
+        self.multiples_audios_var.set(False)
 
 # --------------------------
 # Modified Main Menu and Main Application
