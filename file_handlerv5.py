@@ -1,7 +1,9 @@
 import os
 from pathlib import Path
-from medical_db import MedicalReportDB  # Use the provided DB interface
+import shutil
+from datetime import datetime
 
+from medical_db import MedicalReportDB  # Use the provided DB interface
 # Import your extraction function (now supports PDFs directly)
 from info_extractorv2 import get_requested_info
 
@@ -99,6 +101,35 @@ def main(progress_callback=None):
 
     print(f"Batch processing complete. Processed {processed_groups} groups out of {total_groups}.")
     db.close()
+
+def process_matched_files(pdf_path, audio_path):
+    """
+    Processes the matched PDF and audio files:
+      - Extracts PDF info using get_requested_info().
+      - Uses the 'Patient Name' (spaces replaced with underscores) and the current date/time
+        to build unique filenames.
+      - Copies both files into destination_folder with the new names.
+    """
+    destination_folder= receiver_folder
+    # Extract PDF info
+    info = get_requested_info(pdf_path)
+    patient_name = info.get("Patient Name", "unknown").strip().replace(" ", "_")
+    
+    # Build a unique filename using patient name and current datetime
+    now = datetime.now().strftime("%m-%d-%Y_%H-%M-%S")
+    new_basename = f"{patient_name}_{now}"
+    new_pdf_name = new_basename + ".pdf"
+    new_audio_name = new_basename + ".mp3"
+    
+    # Destination paths
+    dest_pdf = os.path.join(destination_folder, new_pdf_name)
+    dest_audio = os.path.join(destination_folder, new_audio_name)
+    
+    # Copy the files to the destination folder
+    shutil.copy2(pdf_path, dest_pdf)
+    shutil.copy2(audio_path, dest_audio)
+    
+    return True
 
 if __name__ == "__main__":
     main()
