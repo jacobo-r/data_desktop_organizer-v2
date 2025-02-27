@@ -2,6 +2,8 @@ import sqlite3
 import os
 import shutil
 
+from info_extractorv2 import get_requested_info  # Ensure this module is accessible
+
 class MedicalReportDB:
     def __init__(self, db_path='medical_reports.db'):
         self.db_path = db_path
@@ -26,25 +28,34 @@ class MedicalReportDB:
                 transcription_date TEXT NOT NULL,
                 doctor TEXT NOT NULL CHECK(length(doctor) <= 31),
                 audio_file_path TEXT NOT NULL,
-                pdf_file_path TEXT NOT NULL
+                pdf_file_path TEXT NOT NULL,
+                ambulatorio INTEGER NOT NULL,
+                multiple_audios INTEGER NOT NULL
             );
         ''')
         self.cursor.execute("CREATE INDEX IF NOT EXISTS idx_patient_id ON medical_reports(patient_id);")
         self.cursor.execute("CREATE INDEX IF NOT EXISTS idx_patient_name ON medical_reports(patient_name);")
         self.cursor.execute("CREATE INDEX IF NOT EXISTS idx_transcription_date ON medical_reports(transcription_date);")
-
         self.conn.commit()
 
-    def insert_record(self, patient_id, patient_name, medical_procedure, procedure_date, transcriptor, transcription_date, doctor, audio_src_path, pdf_src_path):
+    def insert_record(self, patient_id, patient_name, medical_procedure, procedure_date,
+                      transcriptor, transcription_date, doctor, audio_src_path, pdf_src_path):
         """Insert a record into the database and store files in db_files folder."""
         try:
             self.cursor.execute("SELECT seq FROM sqlite_sequence WHERE name='medical_reports';")
             last_id = self.cursor.fetchone()
             new_id = last_id[0] + 1 if last_id else 1
 
+            # Build the file base name.
+            # Note: We assume that if the file has been processed previously (by process_matched_files)
+            # it will contain the keywords if applicable.
             file_base = f"{patient_id}_{procedure_date.replace('/', '-')}_{doctor.replace(' ', '_')}_{new_id}"
             audio_file_name = file_base + ".mp3"
             pdf_file_name = file_base + ".pdf"
+
+            # Determine booleans by checking for keywords in the file names.
+            ambulatorio_flag = 1 if ("AMBULATORIO" in audio_file_name or "AMBULATORIO" in pdf_file_name) else 0
+            multiple_audios_flag = 1 if ("MULTIPLES_AUDIOS" in audio_file_name or "MULTIPLES_AUDIOS" in pdf_file_name) else 0
 
             audio_file_path = self._store_file(audio_src_path, self.audio_folder, audio_file_name)
             pdf_file_path = self._store_file(pdf_src_path, self.pdf_folder, pdf_file_name)
@@ -52,9 +63,12 @@ class MedicalReportDB:
             self.cursor.execute('''
                 INSERT INTO medical_reports (
                     patient_id, patient_name, medical_procedure, procedure_date,
-                    transcriptor, transcription_date, doctor, audio_file_path, pdf_file_path
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ''', (patient_id, patient_name, medical_procedure, procedure_date, transcriptor, transcription_date, doctor, audio_file_path, pdf_file_path))
+                    transcriptor, transcription_date, doctor, audio_file_path, pdf_file_path,
+                    ambulatorio, multiple_audios
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (patient_id, patient_name, medical_procedure, procedure_date,
+                  transcriptor, transcription_date, doctor, audio_file_path, pdf_file_path,
+                  ambulatorio_flag, multiple_audios_flag))
             self.conn.commit()
             print(f"Record inserted successfully for patient: {patient_name}.")
         except Exception as e:
@@ -121,10 +135,9 @@ def search_database(db_path, patient_id=None, patient_name=None, transcription_d
 
     cursor.execute(query, values)
     results = cursor.fetchall()
-
     conn.close()
 
-    # Prepare the dictionary of results
+    # Prepare the dictionary of results, including the new booleans.
     search_results = []
     for row in results:
         search_results.append({
@@ -137,7 +150,9 @@ def search_database(db_path, patient_id=None, patient_name=None, transcription_d
             "transcription_date": row[6],
             "doctor": row[7],
             "audio_file_path": row[8],
-            "pdf_file_path": row[9]
+            "pdf_file_path": row[9],
+            "ambulatorio": bool(row[10]),
+            "multiple_audios": bool(row[11])
         })
 
     return {"results": search_results}
