@@ -111,8 +111,8 @@ def process_matched_files(pdf_path, audio_path, is_ambulatorio=False, is_multipl
     """
     Processes the matched PDF and audio files:
       - Extracts PDF info using get_requested_info().
-      - Uses the 'Patient Name' (spaces replaced with underscores) and the current date/time
-        to build unique filenames.
+      - Uses the 'Patient ID' and 'Patient Name' (with spaces replaced by underscores)
+        and the current date/time to build unique filenames.
       - If is_ambulatorio == True, prepend "AMBULATORIO" to the filename, and
         copy the PDF to both receiver_folder and folder_ambulatorios.
       - If is_multiples_audios == True, prepend "MULTIPLES_AUDIOS" to the filename.
@@ -121,10 +121,12 @@ def process_matched_files(pdf_path, audio_path, is_ambulatorio=False, is_multipl
 
     # Extract PDF info
     info = get_requested_info(pdf_path)
+    patient_id = info.get("Patient ID", "unknown").strip().replace(" ", "_")
     patient_name = info.get("Patient Name", "unknown").strip().replace(" ", "_")
     
-    # Build a unique filename using patient name and current datetime
+    # Build a unique filename using patient ID, patient name, and current datetime
     now = datetime.now().strftime("%m-%d-%Y_%H-%M-%S")
+    base = f"{patient_id}_{patient_name}_{now}"
 
     # Build a prefix if either checkbox is set
     prefixes = []
@@ -133,12 +135,12 @@ def process_matched_files(pdf_path, audio_path, is_ambulatorio=False, is_multipl
     if is_multiples_audios:
         prefixes.append("MULTIPLES_AUDIOS")
     
-    # Combine prefix, patient name, and datetime
+    # Combine prefix (if any) with the base name
     if prefixes:
         prefix_str = "_".join(prefixes)
-        new_basename = f"{prefix_str}_{patient_name}_{now}"
+        new_basename = f"{prefix_str}_{base}"
     else:
-        new_basename = f"{patient_name}_{now}"
+        new_basename = base
     
     # Final filenames
     new_pdf_name = new_basename + ".pdf"
