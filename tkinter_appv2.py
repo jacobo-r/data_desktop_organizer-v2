@@ -815,7 +815,7 @@ class MainApp(tk.Tk):
         self.title("Almacenamiento de estudios")
         
         # Get the available screen height (subtracting a margin for taskbar)
-        available_height = self.winfo_screenheight() - 50  
+        available_height = self.winfo_screenheight() - 80 
         base_height = 900  # Your design base height
         global APP_SCALE
         APP_SCALE = available_height / base_height
