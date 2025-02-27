@@ -251,9 +251,10 @@ class SearchFrame(ttk.Frame):
             command=lambda: copy_files_to_desktop(audio_path, pdf_path)
         )
         copy_button.pack(pady=5)
-# --------------------------
-# New VerifyMatchFrame for "Agregar Trabajo"
-# --------------------------
+
+
+# Example placeholder for your backend function
+# from file_handlerv5 import process_matched_files
 
 class VerifyMatchFrame(ttk.Frame):
     def __init__(self, parent, controller):
@@ -265,9 +266,15 @@ class VerifyMatchFrame(ttk.Frame):
         self.audio_played = False
         self.audio_play_start_time = None
         
-        # File path variables
+        # Single-file mode paths
         self.audio_file_path = None
         self.pdf_file_path = None
+        
+        # Batch mode variables
+        self.batch_mode = False
+        self.pending_pairs = []
+        self.current_pair_index = 0
+        self.total_pairs = 0
         
         # Storage for extracted PDF info
         self.pdf_info = {}
@@ -277,7 +284,7 @@ class VerifyMatchFrame(ttk.Frame):
         self.multiples_audios_var = tk.BooleanVar(value=False)
         
         # ------------------------
-        # 1) Top bar with a back button
+        # 1) Top bar with a back button & "Seleccionar Carpeta con Pares"
         # ------------------------
         top_frame = ttk.Frame(self)
         top_frame.pack(fill="x", pady=5)
@@ -285,6 +292,19 @@ class VerifyMatchFrame(ttk.Frame):
         back_button = ttk.Button(top_frame, text="Volver al Menu",
                                  command=lambda: controller.show_frame(MainMenu))
         back_button.pack(side="left", padx=10)
+        
+        # Button to pick a folder with pairs
+        folder_button = ttk.Button(
+            top_frame, 
+            text="Seleccionar Carpeta con Pares",
+            style="Accent.TButton",  # If you want a special style, or remove style
+            command=self.select_folder_for_pairs
+        )
+        folder_button.pack(side="right", padx=10)
+
+        # A label to show progress in batch mode, e.g. "Par 1 de 5"
+        self.batch_status_label = ttk.Label(self, text="", font=("Helvetica", 10, "italic"))
+        self.batch_status_label.pack()
         
         # ------------------------
         # 2) Main content area (side-by-side frames)
@@ -414,7 +434,8 @@ class VerifyMatchFrame(ttk.Frame):
             "   la voz del médico y el nombre del paciente.\n"
             "4. Si el nombre y el médico coinciden con lo que aparece en pantalla,\n"
             "   marque ambos campos como \"Verificado\".\n"
-            "5. Finalmente, presione \"Verificar\" para guardar ambos archivos."
+            "5. Finalmente, presione \"Verificar\" para guardar ambos archivos.\n\n"
+            "O seleccione una carpeta con varios pares para procesarlos en secuencia."
         )
         
         instructions_label = ttk.Label(
@@ -430,10 +451,110 @@ class VerifyMatchFrame(ttk.Frame):
         self.verify_button = ttk.Button(self, text="Verificar", command=self.verify_match, state="disabled")
         self.verify_button.pack(pady=10)
     
-    # --------------------------------------------------------------------------
-    # File selection & PDF info
-    # --------------------------------------------------------------------------
+    # ===========================
+    #       BATCH MODE
+    # ===========================
+    def select_folder_for_pairs(self):
+        """
+        Ask the user for a folder and parse all .mp3/.pdf pairs. 
+        Then enter batch mode, loading the first pair automatically.
+        """
+        folder = filedialog.askdirectory(title="Seleccione la carpeta con pares")
+        if not folder:
+            return  # User canceled
+        
+        self.pending_pairs = self.parse_folder_for_pairs(folder)
+        self.total_pairs = len(self.pending_pairs)
+        self.current_pair_index = 0
+        
+        if self.total_pairs == 0:
+            messagebox.showinfo("Información", "No se encontraron pares .mp3 / .pdf con nombres coincidentes.")
+            self.batch_mode = False
+            return
+        
+        # Switch to batch mode
+        self.batch_mode = True
+        self.load_pair(0)
+    
+    def parse_folder_for_pairs(self, folder):
+        """
+        Return a list of (audio_path, pdf_path) for each matching base filename in 'folder'.
+        For example, 'Paciente1.mp3' matches 'Paciente1.pdf'.
+        """
+        mp3_dict = {}
+        pdf_dict = {}
+        
+        for fname in os.listdir(folder):
+            full_path = os.path.join(folder, fname)
+            if os.path.isfile(full_path):
+                base, ext = os.path.splitext(fname)
+                ext = ext.lower()
+                if ext == ".mp3":
+                    mp3_dict[base] = full_path
+                elif ext == ".pdf":
+                    pdf_dict[base] = full_path
+        
+        # Build pairs
+        pairs = []
+        for base_name, mp3_path in mp3_dict.items():
+            if base_name in pdf_dict:
+                pdf_path = pdf_dict[base_name]
+                pairs.append((mp3_path, pdf_path))
+        
+        return pairs
+    
+    def load_pair(self, index):
+        """
+        Load the (audio_path, pdf_path) from self.pending_pairs[index] into the UI,
+        resetting relevant fields. Also update a label to show "Par X de Y."
+        """
+        # 1) Reset the UI for the next pair, but keep batch mode
+        #    We'll define a partial reset that doesn't kill the entire batch state
+        self.reset_ui(keep_batch_mode=True)
+        
+        # 2) Update paths
+        audio_path, pdf_path = self.pending_pairs[index]
+        self.audio_file_path = audio_path
+        self.pdf_file_path = pdf_path
+        
+        # 3) Update the label to show progress
+        self.batch_status_label.config(text=f"Par {index + 1} de {self.total_pairs}")
+        
+        # 4) Show the audio filename & enable playback
+        audio_filename = os.path.basename(audio_path)
+        self.audio_label.config(text=audio_filename)
+        self.play_button.config(state="normal")
+        self.reset_button.config(state="normal")
+        
+        # 5) Parse the PDF info and show it
+        pdf_filename = os.path.basename(pdf_path)
+        self.pdf_label.config(text=pdf_filename)
+        
+        try:
+            from info_extractorv2 import get_requested_info
+            self.pdf_info = get_requested_info(pdf_path)
+        except Exception as e:
+            self.pdf_info = {}
+            messagebox.showerror("Error", f"Error extracting info from PDF: {e}")
+        
+        patient_name = self.pdf_info.get("Patient Name", "Not Available")
+        doctor = self.pdf_info.get("Doctor", "Not Available")
+        exam_type = self.pdf_info.get("Exam Type", "Not Available")
+        transcription_date = self.pdf_info.get("Transcription Date", "Not Available")
+        
+        self.patient_name_var.set(f"Nombre del Paciente: {patient_name}")
+        self.doctor_name_var.set(f"Doctor: {doctor}")
+        self.exam_type_var.set(f"Tipo de Examen: {exam_type}")
+        self.transcription_date_var.set(f"Fecha de Transcripción: {transcription_date}")
+    
+    # ===========================
+    #     SINGLE-FILE SELECTION
+    # ===========================
     def select_audio_file(self, event=None):
+        # If in batch mode, ignore manual selection
+        if self.batch_mode:
+            return
+        
         file_path = filedialog.askopenfilename(title="Select Audio File", filetypes=[("MP3 files", "*.mp3")])
         if file_path:
             self.audio_file_path = file_path
@@ -450,13 +571,17 @@ class VerifyMatchFrame(ttk.Frame):
             self.verify_button.config(state="disabled")
     
     def select_pdf_file(self, event=None):
+        # If in batch mode, ignore manual selection
+        if self.batch_mode:
+            return
+        
         file_path = filedialog.askopenfilename(title="Select PDF File", filetypes=[("PDF files", "*.pdf")])
         if file_path:
             self.pdf_file_path = file_path
             filename = os.path.basename(file_path)
             self.pdf_label.config(text=filename)
             
-            # Extract info from the PDF using get_requested_info from info_extractorv2
+            # Extract info from the PDF
             try:
                 from info_extractorv2 import get_requested_info
                 self.pdf_info = get_requested_info(file_path)
@@ -480,9 +605,9 @@ class VerifyMatchFrame(ttk.Frame):
             self.doctor_check.config(state="disabled")
             self.verify_button.config(state="disabled")
     
-    # --------------------------------------------------------------------------
-    # Audio control & verification checks
-    # --------------------------------------------------------------------------
+    # ===========================
+    #     AUDIO & VERIFICATION
+    # ===========================
     def play_audio(self):
         if self.audio_file_path:
             try:
@@ -517,20 +642,18 @@ class VerifyMatchFrame(ttk.Frame):
         else:
             self.verify_button.config(state="disabled")
     
-    # --------------------------------------------------------------------------
-    # Final verification & file processing
-    # --------------------------------------------------------------------------
     def verify_match(self):
         if not self.audio_file_path or not self.pdf_file_path:
             messagebox.showwarning("Warning", "ATENCION: debe haber seleccionado un audio y un pdf.")
             return
         
-        # Grab the states of the new checkboxes
         is_ambulatorio = self.ambulatorio_var.get()
         is_multiples_audios = self.multiples_audios_var.get()
         
         try:
-            # Call the updated process_matched_files with the new parameters
+            # Replace this call with your actual backend function
+            # E.g.: from file_handlerv5 import process_matched_files
+            # or pass is_ambulatorio and is_multiples_audios as needed
             result = file_handlerv5.process_matched_files(
                 self.pdf_file_path, 
                 self.audio_file_path, 
@@ -539,43 +662,69 @@ class VerifyMatchFrame(ttk.Frame):
             )
             if result:
                 messagebox.showinfo("Success", "Ambos archivos fueron verificados y guardados.")
-                self.reset_ui()
+                
+                # If in batch mode, move on to next pair if any
+                if self.batch_mode:
+                    self.current_pair_index += 1
+                    if self.current_pair_index < self.total_pairs:
+                        self.load_pair(self.current_pair_index)
+                    else:
+                        messagebox.showinfo("Completado", "Se han procesado todos los pares en la carpeta.")
+                        self.reset_ui()
+                        self.batch_mode = False
+                        self.batch_status_label.config(text="")
+                else:
+                    # Normal single-file flow
+                    self.reset_ui()
         except Exception as e:
             messagebox.showerror("Error", f"Error durante el procesamiento: {e}")
     
-    def reset_ui(self):
+    # ===========================
+    #         RESET UI
+    # ===========================
+    def reset_ui(self, keep_batch_mode=False):
+        """
+        Resets the interface to the default state. If keep_batch_mode=True, 
+        we won't override self.batch_mode or clear the batch_status_label.
+        """
         # Reset file paths
         self.audio_file_path = None
         self.pdf_file_path = None
+        
+        # Reset audio controls
+        pygame.mixer.music.stop()
+        self.audio_played = False
+        self.audio_play_start_time = None
+        self.play_button.config(state="disabled")
+        self.reset_button.config(state="disabled")
         
         # Reset labels
         self.audio_label.config(text="Click para seleccionar Audio")
         self.pdf_label.config(text="Click para seleccionar archivo PDF")
         
-        # Reset audio controls
-        self.play_button.config(state="disabled")
-        self.reset_button.config(state="disabled")
-        pygame.mixer.music.stop()
-        self.audio_played = False
-        self.audio_play_start_time = None
-        
-        # Reset verification
+        # Reset PDF info
         self.patient_name_var.set("Nombre del Paciente: No disponible")
         self.doctor_name_var.set("Doctor: No disponible")
         self.exam_type_var.set("Tipo de Examen: No disponible")
         self.transcription_date_var.set("Fecha de Transcripción: No disponible")
         
+        # Reset verification
         self.patient_check_var.set(False)
         self.doctor_check_var.set(False)
         self.patient_check.config(state="disabled")
         self.doctor_check.config(state="disabled")
-        
-        # Reset main verify button
         self.verify_button.config(state="disabled")
         
-        # Reset the checkboxes (optional: you can leave them as user selected)
+        # Reset the checkboxes (optional)
         self.ambulatorio_var.set(False)
         self.multiples_audios_var.set(False)
+        
+        if not keep_batch_mode:
+            self.batch_mode = False
+            self.batch_status_label.config(text="")
+            self.pending_pairs = []
+            self.current_pair_index = 0
+            self.total_pairs = 0
 
 # --------------------------
 # Modified Main Menu and Main Application
