@@ -7,15 +7,16 @@ import unicodedata
 
 
 # ------------------ CONFIG / DICTIONARIES ------------------ #
-TRANSCRIBERS = [ 
-    "GALVIS MORALES JENIFFER",
-    "OROZCO BARTOLO OSBALDO",
-    "OPSINA ARANGO GLORIA NEIVER",
-    "RESTREPO CORREA JHONATAN",
-    "RODRIGUEZ SERNA PAOLA ANDREA",
-    "TAFUR GONZALES SAMIR YANED",
-    "UTIMA PINEDA MARIA AMPARO"
-]
+TRANSCRIBER_TOKENS = {
+    "GALVIS MORALES JENIFFER": "JENIFFER",
+    "GALVIS PEREZ DIANA CAROLINA": "CAROLINA",
+    "OROZCO BARTOLO OSBALDO": "OSBALDO",
+    "OPSINA ARANGO GLORIA NEIVER": "NEIVER",
+    "RESTREPO CORREA JHONATAN": "JHONATAN",
+    "RODRIGUEZ SERNA PAOLA ANDREA": "ANDREA",
+    "TAFUR GONZALES SAMIR YANED": "YANED",
+    "UTIMA PINEDA MARIA AMPARO": "AMPARO"
+}
 
 EXAM_TYPES = {
     "RADIOGRAFIA": ["RADIOGRAFIA", "RX"],
@@ -84,18 +85,17 @@ def remove_accents(s: str) -> str:
         if unicodedata.category(c) != 'Mn'
     )
 
+
 def find_transcriber_any_token(transcripcion: str) -> str:
     """
-    Return the *first* transcriber from TRANSCRIBERS whose *any* name token
-    appears in 'transcripcion' (case-insensitive, accent-insensitive).
+    Return the first transcriber from TRANSCRIBER_TOKENS whose unique token
+    appears in the transcription (case-insensitive, accent-insensitive).
     """
     trans_norm = remove_accents(transcripcion).upper()
-    for full_name in TRANSCRIBERS:
-        name_norm = remove_accents(full_name).upper()
-        tokens = name_norm.split()
-        for token in tokens:
-            if token in trans_norm:
-                return full_name
+    for full_name, unique_token in TRANSCRIBER_TOKENS.items():
+        token_norm = remove_accents(unique_token).upper()
+        if token_norm in trans_norm:
+            return full_name
     return ""
 
 def find_transcription_date(transcripcion: str) -> str:
