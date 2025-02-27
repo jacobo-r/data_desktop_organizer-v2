@@ -13,6 +13,9 @@ receiver_folder = r"C:\Users\Usuario\Desktop\receiver_folder2"
 # Database configuration (creates the DB if it does not exist)
 db_path = r"C:\Users\Usuario\Desktop\server\medical_reports.db"
 
+# folder a donde se van a mover los estudios ambulatorios automaticamente cada vez que se verifique el par
+folder_ambulatorios = r"C:\Users\Usuario\Desktop\ambulatorios"
+
 db = MedicalReportDB(db_path=db_path)
 
 # Allowed file extensions for the two types of files
@@ -103,17 +106,18 @@ def main(progress_callback=None):
     print(f"Batch processing complete. Processed {processed_groups} groups out of {total_groups}.")
     db.close()
 
+
 def process_matched_files(pdf_path, audio_path, is_ambulatorio=False, is_multiples_audios=False):
     """
     Processes the matched PDF and audio files:
       - Extracts PDF info using get_requested_info().
       - Uses the 'Patient Name' (spaces replaced with underscores) and the current date/time
         to build unique filenames.
-      - If is_ambulatorio == True, prepend "AMBULATORIO" to the filename.
+      - If is_ambulatorio == True, prepend "AMBULATORIO" to the filename, and
+        copy the PDF to both receiver_folder and folder_ambulatorios.
       - If is_multiples_audios == True, prepend "MULTIPLES_AUDIOS" to the filename.
-      - Copies both files into receiver_folder with the new names.
+      - The audio is always copied to receiver_folder with the new name.
     """
-    destination_folder = receiver_folder
 
     # Extract PDF info
     info = get_requested_info(pdf_path)
@@ -136,18 +140,26 @@ def process_matched_files(pdf_path, audio_path, is_ambulatorio=False, is_multipl
     else:
         new_basename = f"{patient_name}_{now}"
     
+    # Final filenames
     new_pdf_name = new_basename + ".pdf"
     new_audio_name = new_basename + ".mp3"
     
-    # Destination paths
-    dest_pdf = os.path.join(destination_folder, new_pdf_name)
-    dest_audio = os.path.join(destination_folder, new_audio_name)
+    # Destination paths in the normal folder
+    dest_pdf = os.path.join(receiver_folder, new_pdf_name)
+    dest_audio = os.path.join(receiver_folder, new_audio_name)
     
-    # Copy the files to the destination folder
+    # 1) Copy both PDF and audio to the normal receiver folder
     shutil.copy2(pdf_path, dest_pdf)
     shutil.copy2(audio_path, dest_audio)
     
+    # 2) If ambulatorio, also copy the PDF to the ambulatorio folder
+    if is_ambulatorio:
+        dest_pdf_ambulatorios = os.path.join(folder_ambulatorios, new_pdf_name)
+        shutil.copy2(pdf_path, dest_pdf_ambulatorios)
+    
     return True
+
+
 
 if __name__ == "__main__":
     main()
