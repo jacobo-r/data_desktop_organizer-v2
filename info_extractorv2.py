@@ -86,7 +86,7 @@ def extract_patient_id(documento_text: str) -> str:
     Identify any of the document types (CC, AS, CD, etc.) in the given text,
     then capture the first contiguous sequence of letters and/or digits immediately following.
     """
-    pattern = r"\b(?:CC|AS|CD|CE|DN|DE|MS|NIT|PA|PE|PT|RC|SC|TI|SI)\b\s*[:\-]?\s*([A-Za-z0-9]+)"
+    pattern = r"\b(?:CC|AS|CD|CE|DN|DE|MS|NIT|PA|PE|PT|RC|SC|TI|SI|CN)\b\s*[:\-]?\s*([A-Za-z0-9]+)"
     match = re.search(pattern, documento_text, re.IGNORECASE)
     return match.group(1) if match else ""
 
