@@ -1,21 +1,20 @@
-# pdf directly, no need to do a docx transform.
-
 import PyPDF2
 import os
 import re
 import unicodedata
-
+from datetime import datetime
 
 # ------------------ CONFIG / DICTIONARIES ------------------ #
-TRANSCRIBERS = [ 
-    "GALVIS MORALES JENIFFER",
-    "OROZCO BARTOLO OSBALDO",
-    "OPSINA ARANGO GLORIA NEIVER",
-    "RESTREPO CORREA JHONATAN",
-    "RODRIGUEZ SERNA PAOLA ANDREA",
-    "TAFUR GONZALES SAMIR YANED",
-    "UTIMA PINEDA MARIA AMPARO"
-]
+TRANSCRIBER_TOKENS = {
+    "GALVIS MORALES JENIFFER": "JENIFFER",
+    "GALVIS PEREZ DIANA CAROLINA": "CAROLINA",
+    "OROZCO BARTOLO OSBALDO": "OSBALDO",
+    "OPSINA ARANGO GLORIA NEIVER": "NEIVER",
+    "RESTREPO CORREA JHONATAN": "JHONATAN",
+    "RODRIGUEZ SERNA PAOLA ANDREA": "ANDREA",
+    "TAFUR GONZALES SAMIR YANED": "YANED",
+    "UTIMA PINEDA MARIA AMPARO": "AMPARO"
+}
 
 EXAM_TYPES = {
     "RADIOGRAFIA": ["RADIOGRAFIA", "RX"],
@@ -75,8 +74,6 @@ doctor_map = {
     "CARLOS FELIPE HURTADO ARIAS":      ["HURTADO", "FELIPE", "HURTAO"]
 }
 
-
-
 # ------------------ HELPERS ------------------ #
 def remove_accents(s: str) -> str:
     return ''.join(
@@ -84,18 +81,25 @@ def remove_accents(s: str) -> str:
         if unicodedata.category(c) != 'Mn'
     )
 
+def extract_patient_id(documento_text: str) -> str:
+    """
+    Identify any of the document types (CC, AS, CD, etc.) in the given text,
+    then capture the first contiguous sequence of letters and/or digits immediately following.
+    """
+    pattern = r"\b(?:CC|AS|CD|CE|DN|DE|MS|NIT|PA|PE|PT|RC|SC|TI|SI)\b\s*[:\-]?\s*([A-Za-z0-9]+)"
+    match = re.search(pattern, documento_text, re.IGNORECASE)
+    return match.group(1) if match else ""
+
 def find_transcriber_any_token(transcripcion: str) -> str:
     """
-    Return the *first* transcriber from TRANSCRIBERS whose *any* name token
-    appears in 'transcripcion' (case-insensitive, accent-insensitive).
+    Return the first transcriber from TRANSCRIBER_TOKENS whose unique token
+    appears in the transcription (case-insensitive, accent-insensitive).
     """
     trans_norm = remove_accents(transcripcion).upper()
-    for full_name in TRANSCRIBERS:
-        name_norm = remove_accents(full_name).upper()
-        tokens = name_norm.split()
-        for token in tokens:
-            if token in trans_norm:
-                return full_name
+    for full_name, unique_token in TRANSCRIBER_TOKENS.items():
+        token_norm = remove_accents(unique_token).upper()
+        if token_norm in trans_norm:
+            return full_name
     return ""
 
 def find_transcription_date(transcripcion: str) -> str:
@@ -136,15 +140,14 @@ def extract_header_fields(header_text: str) -> dict:
     norm_header = remove_accents(header_text).lower()
 
     patterns = {
-    "paciente": r"paciente\s*:\s*(.*?)(?=\s+\w+\s*:|$)",
-    "documento": r"documento\s*:\s*(.*?)(?=\s+\w+\s*:|$)",
-    "entidad": r"entidad\s*:\s*(.*?)(?=\s+\w+\s*:|$)",
-    "procedimiento": r"procedimiento\s*:\s*(.*?)(?=\s+\w+\s*:|$)",
-    "fecha": r"fecha\s*:\s*(\d{2}/\d{2}/\d{4})",
-    "nro_remision": r"nro\s+remisi(?:o|ó)n\s*:\s*(.*?)(?=\s+\w+\s*:|$)",
-    "transcripcion": r"transcripci(?:o|ó)n\s*:\s*(.*?)(?=\s+\w+\s*:|$)"
-}
-
+        "paciente": r"paciente\s*:\s*(.*?)(?=\s+\w+\s*:|$)",
+        "documento": r"documento\s*:\s*(.*?)(?=\s+\w+\s*:|$)",
+        "entidad": r"entidad\s*:\s*(.*?)(?=\s+\w+\s*:|$)",
+        "procedimiento": r"procedimiento\s*:\s*(.*?)(?=\s+\w+\s*:|$)",
+        "fecha": r"fecha\s*:\s*(\d{2}/\d{2}/\d{4})",
+        "nro_remision": r"nro\s+remisi(?:o|ó)n\s*:\s*(.*?)(?=\s+\w+\s*:|$)",
+        "transcripcion": r"transcripci(?:o|ó)n\s*:\s*(.*?)(?=\s+\w+\s*:|$)"
+    }
 
     # Use re.DOTALL to capture across multiple lines
     for field, pattern in patterns.items():
@@ -153,11 +156,7 @@ def extract_header_fields(header_text: str) -> dict:
             fields[field] = " ".join(match.group(1).split())  # Normalize whitespace
     return fields
 
-
-
 # ------------------ PARSING THE PDF ------------------ #
-
-
 def extract_text_from_pdf(file_path: str) -> str:
     text = ""
     with open(file_path, "rb") as f:
@@ -220,25 +219,23 @@ def print_requested_fields(info: dict) -> None:
     fecha_creacion  = info.get("fecha", "").strip()
     transcripcion   = info.get("transcripcion", "").strip()
     procedimiento   = info.get("procedimiento", "").strip()
-    doctor          = info.get("doctor", "").strip()
 
     patient_name        = paciente
     creation_date       = fecha_creacion
     transcription_date  = find_transcription_date(transcripcion)
     transcriber         = find_transcriber_any_token(transcripcion)
     exam_type           = find_exam_type(procedimiento)
-    # Extract patient ID from the "documento" field
+    # Extract patient ID from the "documento" field using our helper
     documento_text = info.get("documento", "").strip()
-    match = re.search(r"CC\s*[-\s]+(\d{10}|\d{8})", documento_text, re.IGNORECASE)
-    patient_id = match.group(1) if match else ""
+    patient_id = extract_patient_id(documento_text)
 
     print(f"Patient Name: {patient_name}")
     print(f"Creation Date: {creation_date}")
     print(f"Transcription Date: {transcription_date}")
     print(f"Transcriber: {transcriber}")
     print(f"Exam Type: {exam_type}")
-    print(f"Doctor: {doctor}")
-    print(f"patient ID: {patient_id}")
+    print(f"Doctor: {info.get('doctor', '').strip()}")
+    print(f"Patient ID: {patient_id}")
     print()  # blank line
 
 def get_requested_info(file_path: str) -> dict:
@@ -252,8 +249,8 @@ def get_requested_info(file_path: str) -> dict:
       - 'Doctor'
       - 'Patient ID'
     
-    The Patient ID is extracted from the "documento" field, where we look for the pattern
-    "CC" followed by either an 8-digit or 10-digit number.
+    The Patient ID is extracted from the "documento" field by searching for any of the document
+    types (e.g. CC, AS, PA, etc.) followed by its value.
     """
     info = parse_pdf_file(file_path)
     
@@ -267,10 +264,9 @@ def get_requested_info(file_path: str) -> dict:
     transcriber = find_transcriber_any_token(transcripcion_text)
     exam_type = find_exam_type(procedimiento_text)
 
-    # Extract patient ID from the "documento" field
+    # Extract patient ID from the "documento" field using our helper function
     documento_text = info.get("documento", "").strip()
-    match = re.search(r"CC\s*[-\s]+(\d{8}|\d{10})", documento_text, re.IGNORECASE)
-    patient_id = match.group(1) if match else ""
+    patient_id = extract_patient_id(documento_text)
 
     return {
         "Patient Name": patient_name,
@@ -282,6 +278,7 @@ def get_requested_info(file_path: str) -> dict:
         "Patient ID": patient_id
     }
 
+# ------------------ UNIT TESTS ------------------ #
 import unittest
 
 class TestFieldExtraction(unittest.TestCase):
@@ -311,18 +308,14 @@ class TestFieldExtraction(unittest.TestCase):
         """
         fields = extract_header_fields(header_text)
         self.assertEqual(fields["procedimiento"],
-        "ecografia de abdomen total (higado pancreas vesicula vias biliares rinones bazo grandes vasos pelvis y flancos)")
-
-    
-
-
+                         "ecografia de abdomen total (higado pancreas vesicula vias biliares rinones bazo grandes vasos pelvis y flancos)")
 
 if __name__ == "__main__":
     folder_path = r"C:\Users\Usuario\Desktop\receiver_folder"  # Adjust as needed
-    #unittest.main()
+    # Uncomment the next line to run unit tests:
+    # unittest.main()
 
     # Process all PDF files in the folder
-    import os
     for fname in os.listdir(folder_path):
         if fname.lower().endswith(".pdf"):
             file_path = os.path.join(folder_path, fname)
