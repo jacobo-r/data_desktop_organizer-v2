@@ -1,2 +1,2 @@
-Crear ejecutable:
-pyinstaller --onefile --noconsole tkinter_appv2.py
+Crear ejecutable y distribuir
+pyinstaller --onefile --noconsole run.py
