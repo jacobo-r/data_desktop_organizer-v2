@@ -17,18 +17,18 @@ TRANSCRIBER_TOKENS = {
 }
 
 EXAM_TYPES = {
-    "RADIOGRAFIA": ["RADIOGRAFIA", "RX"],
-    "ECOGRAFIA": ["ECOGRAFIA", "ECO", "ECOS", "ECOGRAFIAS"],
-    "TOMOGRAFIA": ["TOMOGRAFIA", "TAC", "TOMOGRAFIAS"],
+    "RADIOGRAFIA": ["RADIOGRAFIA"],
+    "ECOGRAFIA": ["ECOGRAFIA", "ECOGRAFIAS"],
+    "TOMOGRAFIA": ["TOMOGRAFIA"],
     "ANGIOTOMRAFIA": ["ANGIOTOMRAFIA", "ANGIOTAC"],
-    "RESONANCIA": ["RESONANCIA", "RM", "RMN", "RESONANCIAS"],
+    "RESONANCIA": ["RESONANCIA", "RMN", "RESONANCIAS"],
     "ANGIORESONANCIA": ["ANGIORESONANCIA"],
     "UROGRAFIA": ["UROGRAFIA"],
     "URETROCISTOGRAFIA": ["URETROCISTOGRAFIA"],
     "NEFROSTOMIA": ["NEFROSTOMIA"],
     "CAVOGRAFIA": ["CAVOGRAFIA"],
     "DRENAJE": ["DRENAJE"],
-    "MAMOGRAFIA": ["MAMOGRAFIA", "MAMO"],
+    "MAMOGRAFIA": ["MAMOGRAFIA"],
     "BIOPSIA": ["BIOPSIA"],
     "ANESTESIA": ["ANESTESIA"],
     "IMPLANTE": ["IMPLANTE"],
@@ -49,7 +49,7 @@ EXAM_TYPES = {
     "ARTRORESONANCIA": ["ARTRORESONANCIA"],
     "ARTERIOGRAFIA": ["ARTERIOGRAFIA"],
     "COLECISTOSTOMIA": ["COLECISTOSTOMIA"],
-    "FLUOROSCOPIA": ["FLUOROSCOPIA", "FLURO"],
+    "FLUOROSCOPIA": ["FLUOROSCOPIA"],
     "MARCAPASO": ["MARCAPASO"],
     "FISTULOGRAFIA": ["FISTULOGRAFIA"],
     "URETROGRAFIA": ["URETROGRAFIA"]
@@ -311,7 +311,7 @@ class TestFieldExtraction(unittest.TestCase):
                          "ecografia de abdomen total (higado pancreas vesicula vias biliares rinones bazo grandes vasos pelvis y flancos)")
 
 if __name__ == "__main__":
-    folder_path = r"C:\Users\Usuario\Desktop\receiver_folder"  # Adjust as needed
+    folder_path = r"C:\Users\Usuario\Desktop\BUGGED_SAMPLES" # Adjust as needed
     # Uncomment the next line to run unit tests:
     # unittest.main()
 

@@ -2,7 +2,7 @@ import sqlite3
 import os
 import shutil
 
-from info_extractorv2 import get_requested_info  # Ensure this module is accessible
+from info_extractor import get_requested_info  # Ensure this module is accessible
 
 class MedicalReportDB:
     def __init__(self, db_path='medical_reports.db'):

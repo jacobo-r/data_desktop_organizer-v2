@@ -2,19 +2,16 @@ import os
 from pathlib import Path
 import shutil
 from datetime import datetime
+from config import *
 
 from medical_db import MedicalReportDB  # Use the provided DB interface
 # Import your extraction function (now supports PDFs directly)
-from info_extractorv2 import get_requested_info
+from info_extractor import get_requested_info
 
 # Folder with incoming files
-receiver_folder = r"C:\Users\Usuario\Desktop\receiver_folder2"
-
-# Database configuration (creates the DB if it does not exist)
-db_path = r"C:\Users\Usuario\Desktop\server\medical_reports.db"
-
-# folder a donde se van a mover los estudios ambulatorios automaticamente cada vez que se verifique el par
-folder_ambulatorios = r"C:\Users\Usuario\Desktop\ambulatorios"
+receiver_folder = RECEIVER_DIR
+db_path = DATABASE_DIR
+folder_ambulatorios = AMBULATORIOS_DIR
 
 db = MedicalReportDB(db_path=db_path)
 
