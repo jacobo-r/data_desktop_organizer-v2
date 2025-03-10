@@ -1,2 +1,2 @@
 Crear ejecutable y distribuir
-pyinstaller --onefile --noconsole run.py
+pyinstaller --onefile --noconsole --add-data "config.json;." run.py
