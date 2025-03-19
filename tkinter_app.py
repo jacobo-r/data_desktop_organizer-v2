@@ -456,21 +456,40 @@ class VerifyMatchFrame(ttk.Frame):
     #       BATCH MODE
     # ===========================
     def select_folder_for_pairs(self):
-        folder = filedialog.askdirectory(title="Seleccione la carpeta con pares")
-        if not folder:
-            return  # User canceled
-        
-        self.pending_pairs = self.parse_folder_for_pairs(folder)
-        self.total_pairs = len(self.pending_pairs)
-        self.current_pair_index = 0
-        
-        if self.total_pairs == 0:
-            messagebox.showinfo("Información", "No se encontraron pares .mp3 / .pdf con nombres coincidentes.")
-            self.batch_mode = False
-            return
-        
-        self.batch_mode = True
-        self.load_pair(0)
+    folder = filedialog.askdirectory(title="Seleccione la carpeta con pares")
+    if not folder:
+        return  # User canceled
+    
+    # Identify pairs
+    self.pending_pairs = self.parse_folder_for_pairs(folder)
+    self.total_pairs = len(self.pending_pairs)
+    self.current_pair_index = 0
+    
+    # Create a set of matched filenames (without extensions)
+    matched_files = set()
+    for mp3, pdf in self.pending_pairs:
+        matched_files.add(os.path.splitext(os.path.basename(mp3))[0])
+        matched_files.add(os.path.splitext(os.path.basename(pdf))[0])
+    
+    # Identify unmatched files
+    unmatched_folder = os.path.join(folder, "pares no identificados")
+    os.makedirs(unmatched_folder, exist_ok=True)
+    
+    for file in os.listdir(folder):
+        file_path = os.path.join(folder, file)
+        if os.path.isfile(file_path):
+            file_name, ext = os.path.splitext(file)
+            if ext.lower() in [".pdf", ".mp3"] and file_name not in matched_files:
+                shutil.move(file_path, os.path.join(unmatched_folder, file))
+    
+    if self.total_pairs == 0:
+        messagebox.showinfo("Información", "No se encontraron pares .mp3 / .pdf con nombres coincidentes.")
+        self.batch_mode = False
+        return
+    
+    self.batch_mode = True
+    self.load_pair(0)
+
     
     def parse_folder_for_pairs(self, folder):
         mp3_dict = {}
