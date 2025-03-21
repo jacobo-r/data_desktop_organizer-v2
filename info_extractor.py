@@ -6,15 +6,16 @@ from datetime import datetime
 
 # ------------------ CONFIG / DICTIONARIES ------------------ #
 TRANSCRIBER_TOKENS = {
-    "GALVIS MORALES JENIFFER": "JENIFFER",
-    "GALVIS PEREZ DIANA CAROLINA": "CAROLINA",
-    "OROZCO BARTOLO OSBALDO": "OSBALDO",
-    "OPSINA ARANGO GLORIA NEIVER": "GLORIA",
-    "RESTREPO CORREA JHONATAN": "JHONATAN",
-    "RODRIGUEZ SERNA PAOLA ANDREA": "PAOLA",
-    "TAFUR GONZALES SAMIR YANED": "YANED",
-    "TAFUR GONZALES SAMIR YANED": "YANETH",
-    "UTIMA PINEDA MARIA AMPARO": "AMPARO"
+    "JENIFFER": "GALVIS MORALES JENIFFER",
+    "CAROLINA": "GALVIS PEREZ DIANA CAROLINA",
+    "OSBALDO": "OROZCO BARTOLO OSBALDO",
+    "GLORIA": "OPSINA ARANGO GLORIA NEIVER",
+    "JHONATAN": "RESTREPO CORREA JHONATAN",
+    "PAOLA": "RODRIGUEZ SERNA PAOLA ANDREA",
+    "YANED": "TAFUR GONZALES SAMIR YANED",
+    "YANETH": "TAFUR GONZALES SAMIR YANED",
+    "AMPARO": "UTIMA PINEDA MARIA AMPARO",
+    "EDWARD": "EDWARD OBANDO"
 }
 
 EXAM_TYPES = {
@@ -23,7 +24,7 @@ EXAM_TYPES = {
     "TOMOGRAFIA": ["TOMOGRAFIA"],
     "ANGIOTOMRAFIA": ["ANGIOTOMRAFIA", "ANGIOTAC"],
     "RESONANCIA": ["RESONANCIA", "RMN", "RESONANCIAS"],
-    "ANGIORESONANCIA": ["ANGIORESONANCIA"],     # THIS ISNT WORKING SOMEHOW???
+    "ANGIORESONANCIA": ["ANGIORRESONANCIA", "ANGIORESONANCIA"],     # BOTH WERE ECNOUNTERED
     "UROGRAFIA": ["UROGRAFIA"],
     "URETROCISTOGRAFIA": ["URETROCISTOGRAFIA"],
     "NEFROSTOMIA": ["NEFROSTOMIA"],
@@ -96,13 +97,9 @@ def extract_patient_id(documento_text: str) -> str:
     return match.group(1) if match else ""
 
 def find_transcriber_any_token(transcripcion: str) -> str:
-    """
-    Return the first transcriber from TRANSCRIBER_TOKENS whose unique token
-    appears in the transcription (case-insensitive, accent-insensitive).
-    """
     trans_norm = remove_accents(transcripcion).upper()
-    for full_name, unique_token in TRANSCRIBER_TOKENS.items():
-        token_norm = remove_accents(unique_token).upper()
+    for token, full_name in TRANSCRIBER_TOKENS.items():
+        token_norm = remove_accents(token).upper()
         if token_norm in trans_norm:
             return full_name
     return ""
