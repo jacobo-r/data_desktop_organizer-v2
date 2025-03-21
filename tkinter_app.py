@@ -456,39 +456,39 @@ class VerifyMatchFrame(ttk.Frame):
     #       BATCH MODE
     # ===========================
     def select_folder_for_pairs(self):
-    folder = filedialog.askdirectory(title="Seleccione la carpeta con pares")
-    if not folder:
-        return  # User canceled
+        folder = filedialog.askdirectory(title="Seleccione la carpeta con pares")
+        if not folder:
+            return  # User canceled
     
-    # Identify pairs
-    self.pending_pairs = self.parse_folder_for_pairs(folder)
-    self.total_pairs = len(self.pending_pairs)
-    self.current_pair_index = 0
+        # Identify pairs
+        self.pending_pairs = self.parse_folder_for_pairs(folder)
+        self.total_pairs = len(self.pending_pairs)
+        self.current_pair_index = 0
     
-    # Create a set of matched filenames (without extensions)
-    matched_files = set()
-    for mp3, pdf in self.pending_pairs:
-        matched_files.add(os.path.splitext(os.path.basename(mp3))[0])
-        matched_files.add(os.path.splitext(os.path.basename(pdf))[0])
+        # Create a set of matched filenames (without extensions)
+        matched_files = set()
+        for mp3, pdf in self.pending_pairs:
+            matched_files.add(os.path.splitext(os.path.basename(mp3))[0])
+            matched_files.add(os.path.splitext(os.path.basename(pdf))[0])
     
-    # Identify unmatched files
-    unmatched_folder = os.path.join(folder, "pares no identificados")
-    os.makedirs(unmatched_folder, exist_ok=True)
+        # Identify unmatched files
+        unmatched_folder = os.path.join(folder, "pares no identificados")
+        os.makedirs(unmatched_folder, exist_ok=True)
     
-    for file in os.listdir(folder):
-        file_path = os.path.join(folder, file)
-        if os.path.isfile(file_path):
-            file_name, ext = os.path.splitext(file)
-            if ext.lower() in [".pdf", ".mp3"] and file_name not in matched_files:
-                shutil.move(file_path, os.path.join(unmatched_folder, file))
+        for file in os.listdir(folder):
+            file_path = os.path.join(folder, file)
+            if os.path.isfile(file_path):
+                file_name, ext = os.path.splitext(file)
+                if ext.lower() in [".pdf", ".mp3"] and file_name not in matched_files:
+                    shutil.move(file_path, os.path.join(unmatched_folder, file))
     
-    if self.total_pairs == 0:
-        messagebox.showinfo("Información", "No se encontraron pares .mp3 / .pdf con nombres coincidentes.")
-        self.batch_mode = False
-        return
+        if self.total_pairs == 0:
+            messagebox.showinfo("Información", "No se encontraron pares .mp3 / .pdf con nombres coincidentes.")
+            self.batch_mode = False
+            return
     
-    self.batch_mode = True
-    self.load_pair(0)
+        self.batch_mode = True
+        self.load_pair(0)
 
     
     def parse_folder_for_pairs(self, folder):
@@ -638,6 +638,8 @@ class VerifyMatchFrame(ttk.Frame):
         else:
             self.verify_button.config(state="disabled")
     
+
+
     def verify_match(self):
         if not self.audio_file_path or not self.pdf_file_path:
             messagebox.showwarning("Warning", "ATENCION: debe haber seleccionado un audio y un pdf.")
@@ -647,15 +649,21 @@ class VerifyMatchFrame(ttk.Frame):
         is_multiples_audios = self.multiples_audios_var.get()
         
         try:
+            # for later on moving the processed pair to a folder
+            old_pdf_file_path = self.pdf_file_path
+            old_audio_file_path = self.audio_file_path
+
             result = file_handler.process_matched_files(
                 self.pdf_file_path, 
                 self.audio_file_path, 
                 is_ambulatorio=is_ambulatorio, 
                 is_multiples_audios=is_multiples_audios
             )
+
             if result:
-                messagebox.showinfo("Success", "Ambos archivos fueron verificados y guardados.")
                 
+                messagebox.showinfo("Success", "Ambos archivos fueron verificados, guardados y movidos.")
+
                 if self.batch_mode:
                     self.current_pair_index += 1
                     if self.current_pair_index < self.total_pairs:
@@ -667,8 +675,18 @@ class VerifyMatchFrame(ttk.Frame):
                         self.batch_status_label.config(text="")
                 else:
                     self.reset_ui()
+
+                # Create destination folder path (relative to the PDF file)
+                destination_folder = os.path.join(os.path.dirname(old_pdf_file_path), "Pares Procesados")
+                os.makedirs(destination_folder, exist_ok=True)
+
+                # Move both files
+                shutil.move(old_pdf_file_path, os.path.join(destination_folder, os.path.basename(old_pdf_file_path)))
+                shutil.move(old_audio_file_path, os.path.join(destination_folder, os.path.basename(old_audio_file_path)))
+
         except Exception as e:
             messagebox.showerror("Error", f"Error durante el procesamiento: {e}")
+
     
     # ===========================
     #         RESET UI
@@ -678,6 +696,8 @@ class VerifyMatchFrame(ttk.Frame):
         self.pdf_file_path = None
         
         pygame.mixer.music.stop()
+        pygame.mixer.quit()  # Completely release the mixer to free the file
+        pygame.mixer.init()  # Reinitialize pygame mixer to avoid further issues
         self.audio_played = False
         self.audio_play_start_time = None
         self.play_button.config(state="disabled")
