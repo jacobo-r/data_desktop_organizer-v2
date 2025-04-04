@@ -717,7 +717,7 @@ class VerifyMatchFrame(ttk.Frame):
         self.doctor_check.config(state="disabled")
         self.verify_button.config(state="disabled")
         
-        self.ambulatorio_var.set(False)
+        self.ambulatorio_var.set(True)
         self.multiples_audios_var.set(False)
         
         if not keep_batch_mode:
