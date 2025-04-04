@@ -120,6 +120,7 @@ def process_matched_files(pdf_path, audio_path, is_ambulatorio=False, is_multipl
     info = get_requested_info(pdf_path)
     patient_id = info.get("Patient ID", "unknown").strip().replace(" ", "_")
     patient_name = info.get("Patient Name", "unknown").strip().replace(" ", "_")
+    exam_type = info.get("Exam Type", "estudio_desconocido").strip().replace(" ", "_")
     
     # Build a unique filename using patient ID, patient name, and current datetime
     now = datetime.now().strftime("%m-%d-%Y_%H-%M-%S")
@@ -153,7 +154,9 @@ def process_matched_files(pdf_path, audio_path, is_ambulatorio=False, is_multipl
     
     # 2) If ambulatorio, also copy the PDF to the ambulatorio folder
     if is_ambulatorio:
-        dest_pdf_ambulatorios = os.path.join(folder_ambulatorios, new_pdf_name)
+        # stored as (cedula, estudio y fecha).
+        ambulatorio_pdf_name =  f"{patient_id}_{exam_type}_{now}.pdf"
+        dest_pdf_ambulatorios = os.path.join(folder_ambulatorios, ambulatorio_pdf_name)
         shutil.copy2(pdf_path, dest_pdf_ambulatorios)
     
     return True
